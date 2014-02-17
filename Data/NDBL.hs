@@ -1,8 +1,8 @@
 -- | NDBL is a simple configuration format designed after the @ndb(6)@ set of
 -- utilities used in the Plan 9 operating system. An NDBL file is a sequence
 -- of groups, where each group is a multiset of key-value pairs. This will
--- cover the basics of NDBL; for a more in-depth explanation, consule
--- [insert url here].
+-- cover the basics of NDBL; for a more in-depth explanation, consult
+-- [https://github.com/aisamanra/ndbl](the github page).
 --
 -- Grouping in NDBL is done by
 -- indentation: a new group is started by listing a key-value pair without
