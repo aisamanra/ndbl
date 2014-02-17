@@ -13,8 +13,6 @@ import           Prelude hiding (takeWhile)
 
 type Pair = (Text, Text)
 
-
-
 isSep :: Char -> Bool
 isSep ' '  = True
 isSep '\t' = True
@@ -23,11 +21,13 @@ isSep '\n' = True
 isSep '='  = True
 isSep _    = False
 
+-- | Skips any horizontal (non-new-line) spaces
 hSpace :: Parser ()
 hSpace = skipWhile isHorizontalSpace
 
-pString :: Parser Text
-pString = string "\"" *> (T.pack <$> sBody)
+-- | Parses a quotedd string
+pQString :: Parser Text
+pQString = string "\"" *> (T.pack <$> sBody)
   where sBody = do
           c <- anyChar
           case c of
@@ -35,51 +35,49 @@ pString = string "\"" *> (T.pack <$> sBody)
             '"'  -> return []
             _    -> (c:) <$> sBody
 
+-- | Parse a word of any length
 pWord :: Parser Text
 pWord = takeWhile (not . isSep)
 
+-- | Parse a word of at least length one
 pWord1 :: Parser Text
 pWord1 = takeWhile1 (not . isSep)
 
+-- | Parse a key-value pair
 pPair :: Parser Pair
-pPair = (,) <$> pWord1 <*. "=" <*> (pString <|> pWord)
+pPair = (,) <$> pWord1 <*. "=" <*> (pQString <|> pWord)
 
+-- | Directions passed back from the skipping parsers---whether
+--   to continue parsing the current block, start a new block,
+--   or stop entirely.
 data NewBlock
   = StartNewBlock
   | ContinueBlock
   | StopParsing
     deriving (Eq,Show)
 
-sNextMSet :: Parser NewBlock
-sNextMSet = do
-  hSpace
-  n <- peekChar
-  go n
-    where go (Just '\n') = do
-            _ <- anyChar
-            n <- peekChar
-            go' n
-          go (Just '#') = do
-            skipWhile (not . (== '\n'))
-            sNextMSet
-          go (Just _) = return ContinueBlock
-          go Nothing  = return StopParsing
-          go' (Just '\n') = do
-            _ <- anyChar
-            n <- peekChar
-            go' n
-          go' (Just '#') = do
-            skipWhile (not . (== '\n'))
-            n <- peekChar
-            go' n
-          go' (Just c) | isSpace c = sNextMSet
-                       | otherwise = return StartNewBlock
-          go' Nothing = return StopParsing
+comment :: Parser ()
+comment = char '#' >> skipWhile (not . (== '\n'))
+
+-- | Skips to the next pair (or end of input) and returns whether to parse
+--   the next pair as part of the same group, the next group, or whether
+--   it's reached the end.
+sSkipToNext :: Bool -> Parser NewBlock
+sSkipToNext False = hSpace >> peekChar >>= go
+    where go (Just '\n') = anyChar >> sSkipToNext True
+          go (Just '\r') = anyChar >> sSkipToNext True
+          go (Just '#')  = comment >> sSkipToNext False
+          go (Just _)    = return ContinueBlock
+          go Nothing     = return StopParsing
+sSkipToNext True = peekChar >>= go
+  where go (Just c) | isSpace c = anyChar >> sSkipToNext False
+                    | otherwise = return StartNewBlock
+        go Nothing  = return StopParsing
 
 pBlock :: Parser (NewBlock, [Pair])
 pBlock = do
   p <- pPair
-  b <- sNextMSet
+  b <- sSkipToNext False
   case b of
     StartNewBlock -> return (StartNewBlock, [p])
     StopParsing   -> return (StopParsing,   [p])
