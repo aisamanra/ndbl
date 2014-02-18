@@ -162,5 +162,5 @@ a sequential list of lists of pairs; and one
 flattens the list of lists into just a list, for simple situations in which
 grouping is irrelevant to the configuration. Each function pair guarantees
 that `fromJust . decode . encode == id`, although be aware that
-`encode . fromJust . decode == id` is not always true, as multiple valid NDBL
+`encode . fromJust . decode /= id`, as multiple valid NDBL
 documents may correspond to a single NDBL representation.
