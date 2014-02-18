@@ -136,6 +136,23 @@ Comments can begin a line, as well.
 	  user=abu-al-walid
 	  nicename="H-G Remote Server"
 
+NDBL does not provide arbitrarily-nested hierarchical strutures,
+a list type, a numeric type, a boolean type, or other niceties. This does not
+prevent the programmer from interpreting a value as numeric or boolean,
+or from using groups in an ad-hoc way to represent hierarchical data—it
+merely means that NDBL does not understand those as primitives, nor does it
+provide an interface in its API for understanding or manipulating them.
+For example, a tree structure could hypothetically be represented
+b a series of named nodes
+
+    name=A parent=root
+	name=B parent=A
+	name=C parent=A
+	name=D parent=C
+
+but in the event that such structures arise, it would be better to switch from
+NDBL to a proper data storage format.
+
 Haskell API
 -----------
 
