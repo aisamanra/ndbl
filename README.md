@@ -17,7 +17,7 @@ Short Example
 	remote=main
 	  ip=192.168.1.300
 	  user=guest
-	  key=public.pem
+	  key=public.key
 
 Rationale
 ---------
@@ -33,12 +33,17 @@ include [YAML](http://en.wikipedia.org/wiki/YAML) and
 [TOML](https://github.com/mojombo/toml), both of which are significantly
 more complicated than NDBL.
 
+For incredibly basic configurations—in particular, if you do not use
+grouping at all—an NDBL file is also an executable BASH file which
+defines a slew of environment variables.
+
 Structure of an NDBL Document
 -----------------------------
 
 All NDBL documents consist of a sequence of multisets of key-value pairs.
 All data is represented as text; it is the responsibility of the library
-user to parse numeric data, boolean data, &c, during use.
+user to parse numeric data, boolean data, &c, during use. NBDL requires
+the use of UTF-8 as input and produces UTF-8 chunks when parsed.
 
 A _comment_ is introduced by any whitespace (including newlines)
 followed by a pound sign (`#`) and lasts until the end of a line. This
@@ -64,7 +69,7 @@ Examples With Explanation
 -------------------------
 
 In the examples below, I will use `{ key: value }` as shorthand to represent a
-multiset.
+multimap.
 
     host=machine1
     host=machine2
@@ -125,8 +130,20 @@ Comments can begin a line, as well.
 
     # WARNING: do not change
     host=hg-remote
-	  portforwarding=
+	  portforwarding= # subject to change
 	  hostname=hunter-gratzner.example.com
 	  port=22
 	  user=abu-al-walid
 	  nicename="H-G Remote Server"
+
+Haskell API
+-----------
+
+Three sets of `encode`/`decode` pairs are provided. One produces a sequential
+list of multimap (as implemented by the `multimap` package); one produces
+a sequential list of lists of pairs; and one
+flattens the list of lists into just a list, for simple situations in which
+grouping is irrelevant to the configuration. Each function pair guarantees
+that `fromJust . decode . encode == id`, although be aware that
+`encode . fromJust . decode == id` is not always true, as multiple valid NDBL
+documents may correspond to a single NDBL representation.
