@@ -33,9 +33,21 @@ include [YAML](http://en.wikipedia.org/wiki/YAML) and
 [TOML](https://github.com/mojombo/toml), both of which are significantly
 more complicated than NDBL.
 
-For incredibly basic configurations—in particular, if you do not use
-grouping at all—an NDBL file is also an executable BASH file which
-defines a slew of environment variables.
+One major advantage of NDBL over other other configuration formats is that
+the NDBL grammar is a _regular language_, meaning it can be parsed in
+constant space by a finite state machine. While not intended for data
+storage, NDBL does possess the two qualities which are important for a
+data storage format: it is _self-describing_, meaning that you are
+guaranteed to be able to derive the internal representation of the
+external (serialized) document, and it is _round-tripping_, meaning that if
+we serialize an internal representation to a document and then convert
+back to an internal representation, we will obtain an identical internal
+representation. Note, for example, that neither XML or YAML necessarily
+have this property in practice.
+
+As a pleasant but unintended side effect, an executable bash file that
+does nothing but define environment variables is trivially an NDBL
+file.
 
 Structure of an NDBL Document
 -----------------------------
