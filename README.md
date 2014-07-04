@@ -168,11 +168,7 @@ NDBL to a proper data storage format.
 Haskell API
 -----------
 
-Three sets of `encode`/`decode` pairs are provided. One produces a sequential
-list of multimap (as implemented by the `multimap` package); one produces
-a sequential list of lists of pairs; and one
-flattens the list of lists into just a list, for simple situations in which
-grouping is irrelevant to the configuration. Each function pair guarantees
-that `fromJust . decode . encode == id`, although be aware that
-`encode . fromJust . decode /= id`, as multiple valid NDBL
-documents may correspond to a single NDBL representation.
+At present, the Haskell API exposes an `encode`/`decode` pair which
+(respectively) produce and consume lists of lists of key-value pairs.
+Future work involves typeclasses to make consuming and producing datatypes
+which correspond to NDBL documents easier.
