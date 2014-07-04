@@ -2,7 +2,7 @@
 -- utilities used in the Plan 9 operating system. An NDBL file is a sequence
 -- of groups, where each group is a multiset of key-value pairs. This will
 -- cover the basics of NDBL; for a more in-depth explanation, consult
--- [https://github.com/aisamanra/ndbl](the github page).
+-- <https://github.com/aisamanra/ndbl the github page>.
 --
 -- Grouping in NDBL is done by
 -- indentation: a new group is started by listing a key-value pair without
@@ -32,72 +32,39 @@
 --   file=file1.txt
 --   file=file2.txt
 -- @
+--
+-- Be aware that NDBL guarantees that
+--
+-- @
+-- fromJust . decode . encode == id
+-- @
+--
+-- but does NOT guarantee that
+--
+-- @
+-- encode . fromJust . decode == id
+-- @
 
-module Data.NDBL ( -- * Convenience Types
-                   NDBL
-                 , Pair
-                   -- * MultiMap Representation
-                   -- $mm
-                 , decode
+module Data.NDBL ( decode
                  , encode
-                   -- * List-Of-List Representation
-                   -- $ll
-                 , decodeList
-                 , encodeList
-                   -- * Flat List Representation
-                   -- $fl
-                 , decodeFlat
-                 , encodeFlat
                  ) where
 
-import           Data.MultiMap (MultiMap)
-import qualified Data.MultiMap as M
-import           Data.Text (Text)
+import Data.Text (Text)
 
 import Data.NDBL.Parse
 import Data.NDBL.Print
 
-type NDBL  = [MultiMap Text Text]
-type Pair  = (Text, Text)
-
--- $mm
--- The most convenient way of parsing an NDBL file is as a
--- multimap. In this case, the set of groups is given in-order
--- as a list, and each individual group is represented as a
--- multimap with text keys and values.
---
--- This does mean that the empty string is a possible value for the multimap,
--- although all the keys will be at least one character long.
-
-decode :: Text -> Maybe NDBL
+-- | Decode an NDBL document to a list of lists of key-value pairs.
+decode :: Text -> Maybe [[(Text, Text)]]
 decode t = case pNDBL t of
-  Right r -> Just (map M.fromList r)
-  Left _  -> Nothing
-
-encode :: NDBL -> Text
-encode = pretty . map M.toList
-
--- $ll
--- Not every application wants to bring in a dependency on the
--- multimap package, so functions that deal with lists of lists
--- of tuples are also provided.
-
-decodeList :: Text -> Maybe [[Pair]]
-decodeList t = case pNDBL t of
   Right r -> Just r
   Left _  -> Nothing
 
-encodeList :: [[Pair]] -> Text
-encodeList = pretty
+-- | Decode an NDBL document to a list of lists of key-value pairs,
+--   supplying the parse error from "attoparsec" if decoding fails.
+decodeEither :: Text -> Either String [[(Text, Text)]]
+decodeEither = pNDBL
 
--- $fl
--- Often a config file doesn't need grouping, so these are offered
--- for pure utility.
-
-decodeFlat :: Text -> Maybe [Pair]
-decodeFlat t = case pNDBL t of
-  Right r -> Just $ concat r
-  Left _  -> Nothing
-
-encodeFlat :: [Pair] -> Text
-encodeFlat = pretty . map (:[])
+-- | Encode an NDBL document to its 'Text' representation.
+encode :: [[(Text, Text)]] -> Text
+encode = pretty
