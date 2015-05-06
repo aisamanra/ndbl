@@ -46,7 +46,7 @@ representation. Note, for example, that neither XML or YAML necessarily
 have this property in practice.
 
 As a pleasant but unintended side effect, an executable bash file that
-does nothing but define environment variables is trivially an NDBL
+does nothing but define environment variables is often trivially an NDBL
 file.
 
 Structure of an NDBL Document
@@ -87,15 +87,15 @@ A _document_ is a sequence of groups.
 Examples With Explanation
 -------------------------
 
-In the examples below, I will use `{ key: value }` as shorthand to represent a
-multimap.
+In the examples below, I will use `[ key: value ]` as shorthand to represent an
+ordered sequence of key-value pairs.
 
     host=machine1
     host=machine2
 
 This parses to the following structure:
 
-    [{host:machine1},{host:machine2}]
+    [[ "host": "machine1" ], [ "host": "machine2" ]]
 
 Adding indentation merges the two multisets, as the second line is now
 considered a 'cotinuation' of the first group.
@@ -105,7 +105,7 @@ considered a 'cotinuation' of the first group.
 
 This becomes
 
-    [{host:machine1,host:machine2}]
+    [[ "host": "machine1", "host": "machine2" ]]
 
 A third non-indented line will then start a new group:
 
@@ -115,9 +115,14 @@ A third non-indented line will then start a new group:
 
 This becomes
 
-    [{host:machine1,host:machine2},{host:machine3}]
+    [ [ "host": "machine1"
+      , "host": "machine2"
+	  ]
+	, [ "host": "machine3" ]
+	]
 
-Empty values are permitted, and can be used as a tag of sorts.
+Empty values are permitted, and are idiomatically used as a 'header' for a group
+of configuration options:
 
     database=
 	  file=file1.txt
@@ -126,7 +131,7 @@ Empty values are permitted, and can be used as a tag of sorts.
 
 This becomes
 
-    [{database:},{file:file1.txt},{file:file2.txt},{file:file3.txt}]
+    [["database": "", "file": "file1.txt", "file": "file2.txt", "file": "file3.txt"]]
 
 Comments are allowed but must come after a whitespace character, which
 means that the following document contains no comments:
@@ -135,7 +140,7 @@ means that the following document contains no comments:
 
 This becomes
 
-    [{key:value#hello}]
+    [["key": "value#hello"]]
 
 But this document does contain a comment:
 
@@ -143,7 +148,7 @@ But this document does contain a comment:
 
 This becomes
 
-    [{key:value}]
+    [["key": "value"]]
 
 Comments can begin a line, as well.
 
@@ -154,6 +159,17 @@ Comments can begin a line, as well.
 	  port=22
 	  user=abu-al-walid
 	  nicename="H-G Remote Server"
+
+This document corresponds to
+
+    [ [ "host": "hg-remote"
+      , "portforwarding": ""
+	  , "hostname": "hunter-gratzner.example.com"
+	  , "port": "22"
+	  , "user": "abu-al-walid"
+	  , "nicename": "H-G Remote Server"
+	  ]
+    ]
 
 NDBL does not provide arbitrarily-nested hierarchical strutures,
 a list type, a numeric type, a boolean type, or other niceties. This does not
