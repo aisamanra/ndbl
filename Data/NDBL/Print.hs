@@ -3,27 +3,25 @@
 module Data.NDBL.Print where
 
 import           Data.Char (isSpace)
-import           Data.Text (Text,unpack,pack,concatMap,singleton,any)
 import           Text.PrettyPrint
-import           Prelude hiding (concatMap,any)
 
-pretty :: [[(Text, Text)]] -> Text
-pretty = pack . render . dNDBL
+pretty :: [[(String, String)]] -> String
+pretty = render . dNDBL
 
-dNDBL :: [[(Text, Text)]] -> Doc
+dNDBL :: [[(String, String)]] -> Doc
 dNDBL = vcat . map (vcat . indentTail . map dPair)
 
 indentTail :: [Doc] -> [Doc]
 indentTail (x:xs) = x:map (nest 2) xs
 indentTail xs     = xs
 
-dPair :: (Text, Text) -> Doc
-dPair (k,v) = text (unpack k) <> equals <> dVal v
+dPair :: (String, String) -> Doc
+dPair (k,v) = text k <> equals <> dVal v
 
-dVal :: Text -> Doc
+dVal :: String -> Doc
 dVal t
-  | any isSpace t = doubleQuotes $ text $ unpack $ concatMap go t
-  | otherwise     = text (unpack t)
+  | any isSpace t = doubleQuotes $ text $ concatMap go t
+  | otherwise     = text t
     where go '\\' = "\\\\"
           go '"'  = "\\\""
-          go c    = singleton c
+          go c    = [c]

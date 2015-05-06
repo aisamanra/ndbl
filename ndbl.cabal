@@ -15,8 +15,6 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Data.NDBL
   other-modules:       Data.NDBL.Parse, Data.NDBL.Print
-  build-depends:       base >=4.6 && <4.7,
-                       attoparsec,
-                       text,
+  build-depends:       base >=4.6 && <4.9,
                        pretty
   default-language:    Haskell2010

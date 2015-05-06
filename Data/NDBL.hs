@@ -45,26 +45,28 @@
 -- encode . fromJust . decode == id
 -- @
 
-module Data.NDBL ( decode
+module Data.NDBL ( Document
+                 , Group
+                 , Pair
+                 , decode
+                 , decodeEither
                  , encode
                  ) where
-
-import Data.Text (Text)
 
 import Data.NDBL.Parse
 import Data.NDBL.Print
 
 -- | Decode an NDBL document to a list of lists of key-value pairs.
-decode :: Text -> Maybe [[(Text, Text)]]
+decode :: String -> Maybe [[(String, String)]]
 decode t = case pNDBL t of
   Right r -> Just r
   Left _  -> Nothing
 
 -- | Decode an NDBL document to a list of lists of key-value pairs,
 --   supplying the parse error from "attoparsec" if decoding fails.
-decodeEither :: Text -> Either String [[(Text, Text)]]
+decodeEither :: String -> Either String [[(String, String)]]
 decodeEither = pNDBL
 
--- | Encode an NDBL document to its 'Text' representation.
-encode :: [[(Text, Text)]] -> Text
+-- | Encode an NDBL document to its 'String' representation.
+encode :: [[(String, String)]] -> String
 encode = pretty

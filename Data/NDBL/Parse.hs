@@ -1,96 +1,79 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE LambdaCase #-}
 
-module Data.NDBL.Parse (pNDBL) where
+module Data.NDBL.Parse (Document, Group, Pair, pNDBL) where
 
-import           Control.Applicative
-import           Data.Attoparsec.Text
-import           Data.Char (isSpace)
-import           Data.Text (Text)
-import qualified Data.Text as T
-import           Data.Text.Encoding (decodeUtf8)
-import           Data.Word (Word8)
-import           Prelude hiding (takeWhile)
+type Document = [Group]
+type Group    = [Pair]
+type Pair     = (String,String)
 
-type Pair = (Text, Text)
+type Result a = Either String (String, a)
+type Parse a = String -> Result a
+
+throw = Left
+
+over :: (a -> b) -> Result a -> Result b
+over _ (Left err)     = Left err
+over f (Right (s, x)) = Right (s, f x)
+
+bind :: Result a -> ((String, a) -> Result b) -> Result b
+bind (Left err) _ = Left err
+bind (Right a)  f = f a
 
 isSep :: Char -> Bool
-isSep ' '  = True
-isSep '\t' = True
-isSep '\r' = True
-isSep '\n' = True
-isSep '='  = True
-isSep _    = False
+isSep c = c `elem` " \t\r\n="
 
--- | Skips any horizontal (non-new-line) spaces
-hSpace :: Parser ()
-hSpace = skipWhile isHorizontalSpace
+pQString :: Parse String
+pQString = go
+  where go ('\\':x:xs) = (x:) `over` go xs
+        go ('"':xs) = return (xs, "")
+        go (x:xs) = (x:) `over` go xs
 
--- | Parses a quotedd string
-pQString :: Parser Text
-pQString = string "\"" *> (T.pack <$> sBody)
-  where sBody = do
-          c <- anyChar
-          case c of
-            '\\' -> (:) <$> anyChar <*> sBody
-            '"'  -> return []
-            _    -> (c:) <$> sBody
+pWord :: Parse String
+pWord s@(x:xs)
+  | not (isSep x) = (x:) `over` pWord xs
+pWord s = return (s, "")
 
--- | Parse a word of any length
-pWord :: Parser Text
-pWord = takeWhile (not . isSep)
+pWord1 :: Parse String
+pWord1 (x:xs)
+  | not (isSep x) = (x:) `over` pWord xs
+pWord1 s = throw $ "Expected word; found " ++ show s
 
--- | Parse a word of at least length one
-pWord1 :: Parser Text
-pWord1 = takeWhile1 (not . isSep)
 
--- | Parse a key-value pair
-pPair :: Parser Pair
-pPair = (,) <$> pWord1 <*. "=" <*> (pQString <|> pWord)
+pPair :: Parse (String, String)
+pPair s = bind (pWord1 s) $ \case
+  ('=':'"':s', r) -> (r,) `over` pQString s'
+  ('=':s',     r) -> (r,) `over` pWord s'
+  _               -> throw "Expected '=' after pair name"
 
--- | Directions passed back from the skipping parsers---whether
---   to continue parsing the current block, start a new block,
---   or stop entirely.
-data NewBlock
-  = StartNewBlock
-  | ContinueBlock
-  | StopParsing
-    deriving (Eq,Show)
+isHSpace :: Char -> Bool
+isHSpace c = c == ' ' || c == '\t'
 
-comment :: Parser ()
-comment = char '#' >> skipWhile (not . (== '\n'))
+isVSpace :: Char -> Bool
+isVSpace c = c == '\n' || c == '\r'
 
--- | Skips to the next pair (or end of input) and returns whether to parse
---   the next pair as part of the same group, the next group, or whether
---   it's reached the end.
-sSkipToNext :: Bool -> Parser NewBlock
-sSkipToNext False = hSpace >> peekChar >>= go
-    where go (Just '\n') = anyChar >> sSkipToNext True
-          go (Just '\r') = anyChar >> sSkipToNext True
-          go (Just '#')  = comment >> sSkipToNext False
-          go (Just _)    = return ContinueBlock
-          go Nothing     = return StopParsing
-sSkipToNext True = peekChar >>= go
-  where go (Just c) | isSpace c = anyChar >> sSkipToNext False
-                    | otherwise = return StartNewBlock
-        go Nothing  = return StopParsing
+pSkip :: Parse Bool
+pSkip (y:[]) = return ("", False)
+pSkip (y:s@(x:xs))
+  | isVSpace y && isHSpace x = pSkip xs
+  | isVSpace y               = return (s, False)
+pSkip s@(x:xs)
+  | isHSpace x = pSkip xs
+  | otherwise  = return (s, True)
 
-pBlock :: Parser (NewBlock, [Pair])
-pBlock = do
-  p <- pPair
-  b <- sSkipToNext False
-  case b of
-    StartNewBlock -> return (StartNewBlock, [p])
-    StopParsing   -> return (StopParsing,   [p])
-    ContinueBlock -> do
-      (b, ps) <- pBlock
-      return (b, p:ps)
 
-pBlocks :: Parser [[Pair]]
-pBlocks = do result <- pBlock
-             go result
-  where go (StartNewBlock, ps) = (ps:) <$> pBlocks
-        go (StopParsing, ps)   = return [ps]
-        go _                   = error "unreachable"
+pGroup :: Parse [(String, String)]
+pGroup s = bind (pPair s) $ \case
+  (s', p) -> bind (pSkip s') $ \case
+    (s'', True)  -> (p:) `over` pGroup s''
+    (s'', False) -> return (s'', [p])
 
-pNDBL :: Text -> Either String [[Pair]]
-pNDBL t = parseOnly pBlocks t
+pDocument :: Parse Document
+pDocument s = bind (pGroup s) $ \case
+  ("", g) -> return ("", [g])
+  (xs, g) -> (g:) `over` pDocument xs
+
+pNDBL :: String -> Either String Document
+pNDBL s = case pDocument s of
+  Right (_, d) -> Right d
+  Left err     -> Left err
