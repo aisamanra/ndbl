@@ -3,6 +3,8 @@
 
 module Data.NDBL.Parse (Document, Group, Pair, pNDBL) where
 
+import Data.Char (isPrint, isSpace)
+
 type Document = [Group]
 type Group    = [Pair]
 type Pair     = (String,String)
@@ -25,18 +27,28 @@ isSep c = c `elem` " \t\r\n="
 
 pQString :: Parse String
 pQString = go
-  where go ('\\':x:xs) = (x:) `over` go xs
+  where go ('\\':x:xs)
+          | x == '\\' ||
+            x == '"'  = (x:) `over` go xs
+          | otherwise = throw $ "Unrecognized escape: \"\\" ++ [x] ++ "\""
         go ('"':xs) = return (xs, "")
-        go (x:xs) = (x:) `over` go xs
+        go (x:xs)
+          | isPrint x || isSpace x = (x:) `over` go xs
+          | otherwise = throw $ "Non-printable character: " ++ show x
+        go [] = throw $ "End of document while still inside string"
 
 pWord :: Parse String
 pWord s@(x:xs)
-  | not (isSep x) = (x:) `over` pWord xs
+  | isPrint x && not (isSep x) = (x:) `over` pWord xs
+  | isSep x = return (s, "")
+  | not (isPrint x) = throw $ "Non-printable character: " ++ show x
 pWord s = return (s, "")
 
 pWord1 :: Parse String
 pWord1 (x:xs)
-  | not (isSep x) = (x:) `over` pWord xs
+  | isPrint x && not (isSep x) = (x:) `over` pWord xs
+  | isSep x = throw $ "`=` without previous key"
+  | not (isPrint x) = throw $ "Non-printable character: " ++ show x
 pWord1 s = throw $ "Expected word; found " ++ show s
 
 
@@ -52,8 +64,15 @@ isHSpace c = c == ' ' || c == '\t'
 isVSpace :: Char -> Bool
 isVSpace c = c == '\n' || c == '\r'
 
+pComment :: Parse Bool
+pComment s@(x:xs)
+  | isVSpace x = pSkip s
+  | otherwise  = pComment xs
+
 pSkip :: Parse Bool
-pSkip (y:[]) = return ("", False)
+pSkip ""     = return ("", False)
+pSkip (y:"") = return ("", False)
+pSkip ('#':xs) = pComment xs
 pSkip (y:s@(x:xs))
   | isVSpace y && isHSpace x = pSkip xs
   | isVSpace y               = return (s, False)

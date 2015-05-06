@@ -60,17 +60,24 @@ the use of UTF-8 as input and produces UTF-8 chunks when parsed.
 A _comment_ is introduced by any whitespace (including newlines)
 followed by a pound sign (`#`) and lasts until the end of a line. This
 means that a key cannot begin with the `#` character, but that a `#`
-character can occur as a constitutent of a key-value pair.
+character can occur as a constitutent of a key-value pair, including
+as a trailing character.
 
 A _key-value pair_ consists of a string of at least length one, followed
 by a equals sign (`=`) and subsequently by a string of at least zero.
-The value may be quoted, in which case it is allowed to contain any
+The key must be a bare string, and can contain any printable non-whitespace
+character except the equals sign (`=`) and additionally must not begin
+with a pound sign (`#`). It is acceptable for a key to contains a
+pound sign if it is not the first character of the key.
+The value may be quoted with double quotes (`"`), in which case it is allowed to contain any
 printable character, including the equals sign, whitespace, and newlines.
-An unquoted value is allowed to contain any non-whitespace character
-except the equals sign. The value can be zero length. No spaces are
+Quoted values understand the escape sequences `\\` for a backslash and
+`\"` for a double quote; no other escape sequences are provided.
+An unquoted value is allowed to contain any printable non-whitespace
+character except the equals sign. The value can be zero length. No spaces are
 allowed around the equals sign.
 
-A _group_ is a multiset of key-value pairs. A group is introduced by a
+A _group_ is a sequence of key-value pairs. A group is introduced by a
 non-indented key-value pair; all subsequent key-value pairs on the same
 line, as well as any key-value pairs on subsequent indented lines, belong
 to the same group.
