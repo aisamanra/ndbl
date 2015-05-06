@@ -188,6 +188,32 @@ b a series of named nodes
 but in the event that such structures arise, it would be better to switch from
 NDBL to a proper data storage format.
 
+A Regular Language?
+-------------------
+
+I asserted above that NDBL is a regular language. This is true in the sense
+that valid NDBL documents can be _recognized_ by a regular language. However,
+they cannot be _parsed_ by the kind of regular expressions that you have in
+most programming environments: this is because there is no well-founded way
+of matching a group underneath a Kleene star. We can construct a regular
+expression that matches a group:
+
+~~~~
+([^# \t\r\n=][^ \t\r\n=]*)=("[^"|\\\\|\\"]*"|[^ \t\r\n=]*)
+~~~~
+
+We could also write a regular expression that maches entire NDBL documents,
+using here `{group}` as shorthand for the regex above:
+
+~~~~
+({group}((#[^\r\n]*[\r\n]*[ \t]*|[\r\n]*[ \t])*{group})*[\r\n*])*
+~~~~
+
+But without
+[structural regular expressions](http://9p.io/sources/contrib/steve/other-docs/struct-regex.pdf)
+we cannot use this regex to actually pick apart the structure described
+by an NDBL document.
+
 Haskell API
 -----------
 
